@@ -12,8 +12,9 @@ import {
   OverflowMenu,
   OverflowMenuItem,
   Pagination,
-  Search,
   Table,
+  TableBatchAction,
+  TableBatchActions,
   TableBody,
   TableCell,
   TableContainer,
@@ -23,11 +24,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSelectAll,
+  TableSelectRow,
+  TableToolbar,
+  TableToolbarContent,
+  TableToolbarSearch,
   Tile,
 } from '@carbon/react';
-import { Download } from '@carbon/react/icons';
+import { Calendar, Download } from '@carbon/react/icons';
 import {
   ConfigurableLink,
+  EmptyCard,
   formatDate,
   formatDatetime,
   isDesktop,
@@ -36,8 +43,8 @@ import {
   useLayoutType,
   launchWorkspace2,
   usePagination,
+  showModal,
 } from '@openmrs/esm-framework';
-import { EmptyState } from '../../empty-state/empty-state.component';
 import { exportAppointmentsToSpreadsheet } from '../../helpers/excel';
 import { useTodaysVisits } from '../../hooks/useTodaysVisits';
 import { type Appointment } from '../../types';
@@ -120,7 +127,7 @@ const AppointmentsTable = memo(function AppointmentsTable({
     <Layer className={styles.container}>
       <Tile className={styles.headerContainer}>
         <div className={isDesktop(layout) ? styles.desktopHeading : styles.tabletHeading}>
-          <h4>{`${t(tableHeading)} ${t('appointments', 'Appointments')}`}</h4>
+          <h2>{`${t(tableHeading)} ${t('appointments', 'Appointments')}`}</h2>
         </div>
       </Tile>
       <div className={styles.toolbar}>
@@ -200,6 +207,20 @@ const AppointmentsTable = memo(function AppointmentsTable({
                     rows.map((row) => (
                       <React.Fragment key={row.id}>
                         <TableExpandRow {...getRowProps({ row })}>
+                          <TableSelectRow
+                            {...getSelectionProps({ row })}
+                            checked={selectedAppointmentUuids.has(row.id)}
+                            disabled={!canChangeStatus}
+                            onSelect={() => {
+                              if (selectedAppointmentUuids.has(row.id)) {
+                                setSelectedAppointmentUuids(
+                                  new Set([...selectedAppointmentUuids].filter((uuid) => uuid != row.id)),
+                                );
+                              } else {
+                                setSelectedAppointmentUuids(new Set([...selectedAppointmentUuids, row.id]));
+                              }
+                            }}
+                          />
                           {row.cells.map((cell) => (
                             <TableCell key={cell.id}>{cell.value}</TableCell>
                           ))}

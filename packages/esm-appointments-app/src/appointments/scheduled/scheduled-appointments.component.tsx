@@ -9,9 +9,11 @@ import {
   type ConnectedExtension,
   useLayoutType,
   isDesktop,
+  useAssignedExtensions,
 } from '@openmrs/esm-framework';
 import { useAppointmentsStore } from '../../store';
 import styles from './scheduled-appointments.scss';
+import { type AppointmentPanelConfig } from '../../scheduled-appointments-config-schema';
 
 dayjs.extend(isSameOrBefore);
 
