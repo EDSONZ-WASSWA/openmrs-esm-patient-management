@@ -1,31 +1,22 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button } from '@carbon/react';
 import { Search } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
-import { launchWorkspace } from '@openmrs/esm-framework';
-import { type PatientSearchWorkspaceProps } from '../patient-search-workspace/patient-search.workspace';
+import PatientSearchOverlay from '../patient-search-overlay/patient-search-overlay.component';
 
 interface PatientSearchButtonProps {
   buttonProps?: object;
   buttonText?: string;
-  handleReturnToSearchList?: () => void;
-  hidePatientSearch?: () => void;
   isOpen?: boolean;
   searchQuery?: string;
   searchQueryUpdatedAction?: (query: string) => void;
   selectPatientAction?: (patientUuid: string, patient: fhir.Patient) => void;
-  showPatientSearch?: () => void;
   workspaceTitle?: string;
 }
 
 /**
- *
  * This patient search button is an extension that other apps can include
- * to add patient search functionality. It opens the search UI in a workspace.
- *
- * As it is possible to launch the patient search workspace directly with
- * `launchWorkspace('patient-search-workspace', props)`, this button only exists
- * for compatibility and should not be used otherwise.
+ * to add patient search functionality. It opens the search UI in an overlay.
  *
  * @returns
  */
@@ -37,53 +28,39 @@ const PatientSearchButton: React.FC<PatientSearchButtonProps> = ({
   buttonProps,
   isOpen = false,
   searchQuery = '',
-  handleReturnToSearchList,
-  hidePatientSearch,
-  showPatientSearch,
 }) => {
   const { t } = useTranslation();
+  const [isOverlayOpen, setIsOverlayOpen] = useState(isOpen);
 
-  const launchPatientSearchWorkspace = useCallback(() => {
-    const workspaceProps: PatientSearchWorkspaceProps = {
-      handleSearchTermUpdated: searchQueryUpdatedAction,
-      initialQuery: searchQuery,
-      nonNavigationSelectPatientAction: selectPatientAction,
-      handleReturnToSearchList,
-      showPatientSearch,
-      hidePatientSearch,
-    };
+  const handleOpenOverlay = useCallback(() => {
+    setIsOverlayOpen(true);
+    void (searchQueryUpdatedAction && searchQueryUpdatedAction(''));
+  }, [searchQueryUpdatedAction]);
 
-    launchWorkspace('patient-search-workspace', {
-      ...workspaceProps,
-      workspaceTitle,
-    });
-  }, [
-    handleReturnToSearchList,
-    hidePatientSearch,
-    searchQuery,
-    searchQueryUpdatedAction,
-    selectPatientAction,
-    showPatientSearch,
-    workspaceTitle,
-  ]);
-
-  useEffect(() => {
-    if (isOpen) {
-      launchPatientSearchWorkspace();
-    }
-  }, [isOpen, launchPatientSearchWorkspace]);
+  const handleCloseOverlay = useCallback(() => {
+    setIsOverlayOpen(false);
+  }, []);
 
   return (
-    <Button
-      aria-label={t('searchPatientButton', 'Search Patient Button')}
-      onClick={() => {
-        launchPatientSearchWorkspace();
-        void (searchQueryUpdatedAction && searchQueryUpdatedAction(''));
-      }}
-      renderIcon={(props) => <Search size={20} {...props} />}
-      {...buttonProps}>
-      {buttonText ? buttonText : t('searchPatient', 'Search patient')}
-    </Button>
+    <>
+      <Button
+        aria-label={t('searchPatientButton', 'Search Patient Button')}
+        onClick={handleOpenOverlay}
+        renderIcon={(props) => <Search size={20} {...props} />}
+        {...buttonProps}>
+        {buttonText ? buttonText : t('searchPatient', 'Search patient')}
+      </Button>
+
+      {isOverlayOpen && (
+        <PatientSearchOverlay
+          onClose={handleCloseOverlay}
+          query={searchQuery}
+          header={workspaceTitle}
+          handleSearchTermUpdated={searchQueryUpdatedAction}
+          nonNavigationSelectPatientAction={selectPatientAction}
+        />
+      )}
+    </>
   );
 };
 

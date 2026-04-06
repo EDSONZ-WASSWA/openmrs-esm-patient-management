@@ -31,11 +31,6 @@ export const patientSearchButton = getAsyncLifecycle(
 // This extension is not compatible with the tablet view.
 export const patientSearchBar = getAsyncLifecycle(() => import('./compact-patient-search.extension'), options);
 
-export const patientSearchWorkspace = getAsyncLifecycle(
-  () => import('./patient-search-workspace/patient-search.workspace'),
-  options,
-);
-
 export const patientSearchWorkspace2 = getAsyncLifecycle(
   () => import('./patient-search-workspace/patient-search2.workspace'),
   options,

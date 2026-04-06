@@ -1,23 +1,28 @@
 import React from 'react';
 import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
-import { getDefaultsFromConfigSchema, launchWorkspace, useConfig } from '@openmrs/esm-framework';
+import { getDefaultsFromConfigSchema, useConfig } from '@openmrs/esm-framework';
 import { type PatientSearchConfig, configSchema } from '../config-schema';
 import PatientSearchButton from './patient-search-button.component';
 
 const mockUseConfig = jest.mocked(useConfig<PatientSearchConfig>);
-const mockedLaunchWorkspace = jest.mocked(launchWorkspace);
+
+jest.mock('../patient-search-overlay/patient-search-overlay.component', () => {
+  return jest.fn(() => <div data-testid="mock-patient-search-overlay" />);
+});
 
 describe('PatientSearchButton', () => {
   beforeEach(() => {
+    const defaults = getDefaultsFromConfigSchema<PatientSearchConfig>(configSchema);
     mockUseConfig.mockReturnValue({
-      ...getDefaultsFromConfigSchema(configSchema),
+      ...defaults,
       search: {
+        ...defaults.search,
         disableTabletSearchOnKeyUp: false,
         patientChartUrl: '',
         showRecentlySearchedPatients: false,
       },
-    });
+    } as PatientSearchConfig);
   });
   it('renders with default props', () => {
     render(<PatientSearchButton />);
@@ -35,7 +40,7 @@ describe('PatientSearchButton', () => {
     expect(customButton).toBeInTheDocument();
   });
 
-  it('displays workspace when patient search button is clicked', async () => {
+  it('displays overlay when patient search button is clicked', async () => {
     const user = userEvent.setup();
 
     render(<PatientSearchButton />);
@@ -44,6 +49,6 @@ describe('PatientSearchButton', () => {
 
     await user.click(searchButton);
 
-    expect(mockedLaunchWorkspace).toHaveBeenCalled();
+    expect(screen.getByTestId('mock-patient-search-overlay')).toBeInTheDocument();
   });
 });

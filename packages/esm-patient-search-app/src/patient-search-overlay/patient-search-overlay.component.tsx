@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type PatientSearchContextProps } from '../patient-search-context';
-import PatientSearchWorkspace from '../patient-search-workspace/patient-search.workspace';
+import { useConfig, useDebounce } from '@openmrs/esm-framework';
+import { type PatientSearchConfig } from '../config-schema';
+import PatientSearchBar from '../patient-search-bar/patient-search-bar.component';
+import AdvancedPatientSearchComponent from '../patient-search-page/advanced-patient-search.component';
 import Overlay from '../ui-components/overlay.component';
 
-interface PatientSearchOverlayProps extends PatientSearchContextProps {
+export interface PatientSearchOverlayProps {
   onClose: () => void;
-  handleSearchTermUpdated?: (value: string) => void;
   query?: string;
   header?: string;
+  handleSearchTermUpdated?: (query: string) => void;
+  nonNavigationSelectPatientAction?: (patientUuid: string, patient: fhir.Patient) => void;
+  patientClickSideEffect?: (patientUuid: string, patient: fhir.Patient) => void;
 }
 
 /**
@@ -18,8 +22,8 @@ interface PatientSearchOverlayProps extends PatientSearchContextProps {
  * - in the top nav, when the user clicks on the magnifying glass icon
  *   (in desktop mode, the inline CompactPatientSearchComponent is used instead)
  *
- * Although similar looking, this overlay behaves somewhat differently from a regular
- * workspace, and has its own overlay logic.
+ * This overlay provides a container for the patient search functionality
+ * (search bar and results).
  */
 const PatientSearchOverlay: React.FC<PatientSearchOverlayProps> = ({
   onClose,
@@ -30,15 +34,43 @@ const PatientSearchOverlay: React.FC<PatientSearchOverlayProps> = ({
   patientClickSideEffect,
 }) => {
   const { t } = useTranslation();
+  const {
+    search: { disableTabletSearchOnKeyUp },
+  } = useConfig<PatientSearchConfig>();
+
+  const [searchTerm, setSearchTerm] = useState(query);
+  const showSearchResults = Boolean(searchTerm?.trim());
+  const debouncedSearchTerm = useDebounce(searchTerm);
+
+  const handleClearSearchTerm = useCallback(() => {
+    setSearchTerm('');
+    handleSearchTermUpdated?.('');
+  }, [handleSearchTermUpdated]);
+
+  const onSearchTermChange = useCallback(
+    (value: string) => {
+      setSearchTerm(value);
+      handleSearchTermUpdated?.(value);
+    },
+    [handleSearchTermUpdated],
+  );
 
   return (
     <Overlay header={header ?? t('searchResults', 'Search results')} close={onClose}>
-      <PatientSearchWorkspace
-        initialQuery={query}
-        handleSearchTermUpdated={handleSearchTermUpdated}
-        nonNavigationSelectPatientAction={nonNavigationSelectPatientAction}
-        patientClickSideEffect={patientClickSideEffect}
+      <PatientSearchBar
+        initialSearchTerm={query}
+        onChange={(value) => !disableTabletSearchOnKeyUp && onSearchTermChange(value)}
+        onClear={handleClearSearchTerm}
+        onSubmit={onSearchTermChange}
       />
+      {showSearchResults && (
+        <AdvancedPatientSearchComponent
+          query={debouncedSearchTerm}
+          inTabletOrOverlay
+          onPatientSelected={nonNavigationSelectPatientAction}
+          patientClickSideEffect={patientClickSideEffect}
+        />
+      )}
     </Overlay>
   );
 };
